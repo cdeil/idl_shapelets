@@ -1,0 +1,7 @@
+PSF models.
+
+These are highly oversampled .fits images of the PSF on different telescopes.
+
+Files in this directory are:
+TinyTim_PSF.fits     - TinyTim model of HST PSF. Pixel scale=0.01 arcsec/pixel
+

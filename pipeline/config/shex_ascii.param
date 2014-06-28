@@ -1,0 +1,33 @@
+#
+#                        DO NOT CHANGE THIS FILE! 
+#
+# SExtractor parameters used by sex.pro with the /ASCII option, and assumed
+# by shapelets_read_sexcat.pro. This is also the output format mimicked by
+# simage_assemble_image.pro. If you want to output different SExtractor fields,
+# change shex.param, and use SExtractor with the (default) fits format output.
+#
+X_IMAGE
+Y_IMAGE
+
+XPEAK_IMAGE
+YPEAK_IMAGE
+
+XMIN_IMAGE
+YMIN_IMAGE
+XMAX_IMAGE
+YMAX_IMAGE
+
+A_IMAGE
+B_IMAGE
+
+THETA_IMAGE
+
+CLASS_STAR
+FWHM_IMAGE
+
+MAG_BEST
+
+FLUX_BEST
+ISOAREA_IMAGE
+
+NUMBER

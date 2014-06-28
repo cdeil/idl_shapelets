@@ -1,0 +1,146 @@
+80,81c80
+< ;       Sep 05 - Noise not computed for higest flags by JB
+< ;       Aug 05 - Negative defaults of data images taken into account by JB
+---
+> ;       Nov 05 - Integers used for image pixel coordinates by Barnaby Rowe.
+92c91
+< ;       Mar 04 - Option to use circular postage stamps added by A. Refregier.
+---
+> ;       Mar 04 - Option to use circular postage stamps by Alexandre Refregier.
+138c137
+< 		     "Little bkgrd","No backgd","Fatal crash"] 
+---
+> 		                 "Little bkgrd","No backgd","Fatal crash"] 
+143c142
+<   ; I keep swapping image and sexcat around. Cope with this.
+---
+>   ; I keep accidentally swapping image and sexcat around. Cope with this.
+215,218c214,217
+< xmin  = (fix(sexcat.x[id,0])-r_pstamp > 0)< (image.n_pixels[0]-1)
+< xmax  = (fix(sexcat.x[id,0])+r_pstamp < (image.n_pixels[0]-1) )>0
+< ymin  = (fix(sexcat.x[id,1])-r_pstamp > 0)< (image.n_pixels[1]-1)
+< ymax  = (fix(sexcat.x[id,1])+r_pstamp < (image.n_pixels[1]-1))>0
+---
+> xmin = (fix(sexcat.x[id,0])-r_pstamp > 0)< (image.n_pixels[0]-1)
+> xmax = (fix(sexcat.x[id,0])+r_pstamp < (image.n_pixels[0]-1) )>0
+> ymin = (fix(sexcat.x[id,1])-r_pstamp > 0)< (image.n_pixels[1]-1)
+> ymax = (fix(sexcat.x[id,1])+r_pstamp < (image.n_pixels[1]-1))>0
+274a274
+> ; Should there be a response here if the xbugfixed keyword is set?
+288c288
+<   if n_gd gt 0 then bits[gd]=objin[i]+1    ; following Sextractor convention
+---
+>   if n_gd gt 0 then bits[gd]=objin[i]+1    ; following Sextractor indexing convention to start from 1 not 0
+303a304
+> 
+311a313
+> 
+313c315
+< obpix = where((bits eq (id+1)),nobpix)
+---
+> obpix = where((bits eq (id+1)),nobpix)  
+322,323d323
+< ; Construct noise map, only if needed
+< if max(flag) lt 5 then begin  ;if not, the object will be skipped by shex, so needless to know about its noise
+324a325
+> ; Construct noise map
+359c360
+< if keyword_set(vary_local_noise_calc) then begin
+---
+> if keyword_set(very_local_noise_calc) then begin
+400a402
+> 
+402,405c404,407
+<   left=(sexcat.x[id,0]-back_size/2)>0
+<   right=(sexcat.x[id,0]+back_size/2)<(image.n_pixels[0]-1)
+<   bottom=(sexcat.x[id,1]-back_size/2)>0
+<   top=(sexcat.x[id,1]+back_size/2)<(image.n_pixels[1]-1)
+---
+>   left=round(sexcat.x[id,0]-back_size/2)>0
+>   right=round(sexcat.x[id,0]+back_size/2)<(image.n_pixels[0]-1)
+>   bottom=round(sexcat.x[id,1]-back_size/2)>0
+>   top=round(sexcat.x[id,1]+back_size/2)<(image.n_pixels[1]-1)
+409,419c411,425
+<   objects=abs(image.seg[left:right,bottom:top])<1
+<   roi=where(objects,n_roi)
+<   if n_roi gt 0 then begin
+<     grown_objects=-objects
+<     for k=-n_grow,n_grow do grown_objects=+shift(objects,k)
+<     tr_objects=transpose(objects)
+<     for k=-n_grow,n_grow do grown_objects+=transpose(shift(tr_objects,k))
+<     for k=1,(n_grow+1)/2 do begin
+<       for i=-1,1,2 do begin
+< 	for j=-1,1,2 do begin
+<           grown_objects+=transpose(shift(transpose(shift(objects,i*k)),j*k))
+---
+>   if tag_exist(image,"seg") then begin
+>     if n_elements(image.seg) gt 1 then begin  
+>       objects=abs(image.seg[left:right,bottom:top])<1
+>       roi=where(objects,n_roi)
+>       if n_roi gt 0 then begin
+>         grown_objects=-objects
+>         for k=-n_grow,n_grow do grown_objects=+shift(objects,k)
+>         tr_objects=transpose(objects)
+>         for k=-n_grow,n_grow do grown_objects+=transpose(shift(tr_objects,k))
+>         for k=1,(n_grow+1)/2 do begin
+>           for i=-1,1,2 do begin
+>             for j=-1,1,2 do begin
+>               grown_objects+=transpose(shift(transpose(shift(objects,i*k)),j*k))
+>             endfor
+>           endfor
+421,430c427,436
+<       endfor
+<     endfor
+<     objects=grown_objects<1
+<     roi=where(objects,n_roi)
+<     if n_roi gt 0 then begin
+<       highbad=max(noise_pstamp)+1
+<       noise_pstamp[roi]=highbad
+<     endif
+<   endif
+< 
+---
+>         objects=grown_objects<1
+>         roi=where(objects,n_roi)
+>         if n_roi gt 0 then begin
+>           highbad=max(noise_pstamp)+1
+>           noise_pstamp[roi]=highbad
+>         endif
+>       endif
+>     endif else n_roi=0
+>   endif else n_roi=0
+>   
+432,439c438
+< ;do not iterate if there is a -1.2 sigma default in postage stamp or
+< ;if more than 1/4 of the pstamp is 0 (ad hoc prescription)
+<   clip=0B
+<   zeronoise=where(noise_pstamp eq 0,nzero)
+<   if (min(noise_pstamp) le image.mean_image-1.2*image.rms_image or float(nzero)/float(n_elements(noise_pstamp)) ge 0.25) then clip=1B
+< ;if (min(noise_pstamp) le mean(image.image)-1.2*stddev(image.image) or float(nzero)/float(n_elements(noise_pstamp)) ge 0.25) then clip=1B
+<   if float(nzero)/float(n_elements(noise_pstamp)) ge 0.25 then message,'WARNING ! more than 1/4 of the pstamp is made of 0 pixels !',/continue,noprint=silent
+<   if (n_elements(noise_pstamp)-n_roi ge nbgpix_min and not clip) then begin
+---
+>   if n_elements(noise_pstamp)-n_roi ge nbgpix_min then begin
+450d448
+< endelse
+451a450
+> endelse
+460,466c459
+< endif else begin
+<     noise=replicate(1.,n_bit[0],n_bit[1])
+<     back_mean_ext=0
+<     back_rms_ext=0
+<     back_mean_local=0
+<     back_rms_local=0
+< endelse
+---
+> 
+540a534,539
+> ; Report flag
+> message="Pstamp flag: "+strtrim(pstamp.flag,2)
+> if n_elements(flag) eq 1 then message=message+", ["+strjoin(strtrim(flag,2),",")+"]"
+> message,message,/info,noprint=silent
+> 
+> 
+543a543
+> 

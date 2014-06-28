@@ -1,0 +1,90 @@
+#!/bin/tcsh -f
+#
+#    	 ***********************************************
+#    	 *									  *
+#    	 *	      Shapelets ShExtractor script	       *
+#    	 *									  *
+#    	 * © 2004 Richard Massey & Alexandre Refregier *  					 *
+#    	 *									  *
+#    	 ***********************************************
+#
+#
+# PURPOSE:
+# ========
+#
+# Running this script with e.g. "shex HDF-N_f814" will create both a 
+# SExtractor and shapelet catalogue of (almost) all of the objects within
+# the image shapelets_paths(3)+"HDF-N_f814"+.fits".
+#
+#
+# INSTRUCTIONS:
+# =============
+#
+#
+#
+#
+# Check that there have been some arguments on the command line.
+#
+if ($#argv != 1) then
+ echo USAGE: $0 image_filename \(without path or extension\)
+ exit
+endif
+
+
+#
+# Print a friendly hello message.
+#
+echo
+echo Shapelets ShExtractor script running on `hostname`
+echo
+
+
+
+#
+# Run IDL.
+#
+nice +16 idl -queue << EOF
+
+
+ ;
+ ; Print another friendly hello message.
+ ;
+ spawn,"\hostname",hostname
+ message,"Shapelets ShExtractor script running on "+hostname,/info
+
+
+ ;
+ ; Determine image file name from command line input.
+ ;
+ filename="${argv[1]}"
+ 
+
+ ;
+ ; Run SExtractor
+ ;
+ sex,filename
+
+
+ ;
+ ; Load point spread function for optional deconvolution
+ ;  (uncomment one of these lines).
+ ;
+ ;shapelets_read_psf,psf,/SNAP,pixsize=0.04,n_max=12
+ ;shapelets_read_psf,psf,/HST,pixsize=0.04,n_max=8
+ shapelets_read_psf,psf,/HST,pixsize=pixsize & shapelets_circularise,psf
+
+
+ ;
+ ; Run SHExtractor
+ ;
+ shex,filename,n_max=15,/seg_map,psf=psf
+ 
+
+ ;
+ ; Quit IDL, returning a successful flag.
+ ;
+ exit,status=0
+ 
+
+EOF
+

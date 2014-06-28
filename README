@@ -1,0 +1,57 @@
+
+        ***********************************************
+        *                                             *
+        *             Shapelets IDL code              *
+        *                                             *
+        * © 2004 Richard Massey & Alexandre Refregier * 
+        *                                             *
+        ***********************************************
+
+	     
+Shapelets IDL code copyright © 2004 Richard Massey and
+Alexandre Refregier. This requires IDL v5.4 or above to have been
+installed on your computer, but the main commands can also be run
+directly from a UNIX or Linux prompt via simple shell scripts, which
+are bundled with the files. A stand-alone set of core routines is
+included in this distribution, to decompose images into shapelets and
+to manipulate them; we would be interested to collaborate with anyone
+requiring more advanced applications.
+
+The Shapelets code is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License as
+published by the Free Software Foundation; either version 2 of the
+License, or (at your option) any later version.
+
+The Shapelets code is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the file
+COPYING.txt which is also part of this distribution.
+
+Additional documentation is available from the shapelets web site at
+http://www.astro.caltech.edu/~rjm/shapelets/ .
+
+
+AUTHORS:
+========
+
+The shapelets code was written by Richard Massey and Alexandre
+Refregier. Please at least acknowledge use of the code in any
+resulting work, and reference papers Refregier 2003 (MNRAS 338 35)
+and Massey & Refregier 2004 (MNRAS submitted). If you make very
+extensive use of the code, we'd love to be on the author list. But
+whatever happens to the code, we would always be most interested to
+hear about any use you've found for shapelets via
+rjm@astro.caltech.edu . Thanks!
+ 
+
+ACKNOWLEDGEMENTS:
+=================
+
+We are very grateful to David Bacon and Tzu-Ching Chang for their
+help developing the shapelets formalism and their contributions to
+some of the IDL routines. Thanks also to Alain Bonissent for his
+careful bug-fixing and optimisation of others. If anyone develops
+further routines that other users might find useful, and which could
+be included with the shapelets bundle, please do get in touch.
+Thanks!
+

@@ -1,0 +1,1 @@
+Standard IDL routines (many from the IDL astronomy users' library) that are required by the shapelet routines. These are included here for completeness; obtain the latest versions of such routines from http://idlastro.gsfc.nasa.gov/.

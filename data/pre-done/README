@@ -1,0 +1,27 @@
+Here's one I made earlier!
+
+These files are pre-made versions of the catalogues and variables created by
+the shapelets_demo.pro routine. If you can't get part of that routine to work,
+copy these up a directory and comment out the line that creates them. Then at
+least you might be able to get the rest to work.
+
+Files in this directory are:
+example.sexcat          - SExtractor catalogue of example.fits
+example.shapecat        - shapelet catalogue of example.fits
+example_deconv.shapecat - shapelet catalogue of example.fits, deconvolved from
+                          TinyTim model of the HST PSF
+IDL_memory_dump_after_demo.sav
+                        - This is an IDL-format file containing all of the
+                          variables, as they are stored in memory, after running
+                          shapelets_demo.pro. It can be loaded into IDL v6.0 or
+                          later (on any platform), via
+                       
+                          restore,"data/pre-done/IDL_memory_dump_after_demo.sav",/verbose
+                       
+                          The structures of interest are:
+                       
+                          DECOMP          STRUCT    = -> <Anonymous> Array[1]
+                          IMAGE           STRUCT    = -> <Anonymous> Array[1]
+                          PSF             STRUCT    = -> <Anonymous> Array[1]
+                          SEXCAT          STRUCT    = -> <Anonymous> Array[1]
+                          SHAPECAT        STRUCT    = -> <Anonymous> Array[1]

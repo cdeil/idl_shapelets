@@ -1,0 +1,8 @@
+Data directory.
+
+Put your images and catalogues in this directory.
+
+Files in this directory when it's downloaded are:
+example.fits         - 512x512 section of the HDF-N (version 2 reduction)
+example_noise.fits   - DRIZZLE's inverse variance map of the same region
+

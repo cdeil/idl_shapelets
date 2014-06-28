@@ -1,0 +1,1 @@
+IDL routines to locate objects in an image (using SExtractor) and to automatically decompose all of them into shapelets.

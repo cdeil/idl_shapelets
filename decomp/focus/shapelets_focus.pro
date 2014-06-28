@@ -1,0 +1,279 @@
+;$Id: shapelets_focus.pro, v2$
+;
+; Copyright © 2005 Richard Massey and Alexandre Refregier.
+;
+; This file is a part of the Shapelets analysis code.
+; www.astro.caltech.edu/~rjm/shapelets/
+;
+; The Shapelets code is free software; you can redistribute it and/or
+; modify it under the terms of the GNU General Public Licence as published
+; by the Free Software Foundation; either version 2 of the Licence, or
+; (at your option) any later version.
+;
+; The Shapelets code is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+; GNU General Public Licence for more details.
+;
+; You should have received a copy of the GNU General Public Licence
+; along with the Shapelets code; if not, write to the Free Software
+; Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
+;
+;+
+; NAME:
+;       SHAPELETS_FOCUS
+;
+; PURPOSE:
+;       Find the optimal beta, n_max and centroid for a shapelet
+;       decomposition via an iterative search throughout the space spanned
+;       by these (meta-)variables. See the paper Polar shapelets, by
+;       Massey & Refregier (2004) for more details.
+;
+; CATEGORY:
+;       Shapelets.
+;
+; INPUTS:
+;       PSTAMP - Postage stamp structure containing the image (and other
+;                parameters) around a single object. This can be created with
+;                shapelets_image2pstamp.pro
+;
+; OPTIONAL INPUTS:
+;       BETA_GUESS      - Starting point for shapelet scale size beta.
+;       N_MAX_GUESS     - Starting point for truncation order n_max.
+;       CENTRE_GUESS    - Starting point for centre of shapelet basis functions.
+;       CHISQ_TARGET	  - Ideal value of reduced chi^2 for the residual image.
+;       CHISQ_TOLERANCE - Acceptable accuracy for chi^2, in units of the rms.
+;       CHISQ_FLATNESS  - Minimum difference in chi^2 between two decompositions
+;                         with n_max differing by two to trigger the flatness
+;                         constraint in shapelets_focus_nmax
+;       BETA_TOLERANCE  - Fractional tolerance for finding beta.
+;       FIXED_BETA      - Force this value of beta for all objects. Still iterates
+;                         to find the best centroid and n_max.
+;       THETA_MIN_GEOM  - Minimum scale on which it is possible for the image to
+;                         contain data.
+;       N_MAX_RANGE     - Range of n_max values to consider.
+;       PSF             - A shapelet decomp structure representing the local PSF.
+;                         The shapelet model of the galaxy will be deconvolved
+;                         from this.
+;
+; KEYWORD PARAMETERS:
+;       SILENT      	  - Operate silently.
+;       VERBOSE     	  - Operate noisily.
+;       SKY         	  - 1: fit sky background with a constant value around object.
+;                   	    2: fit sky gradient with a plane around object.
+;                   	    DEFAULT: no sky subtraction.
+;       NON1        	  - a_01 and a_10 are forced to be zero, Kuijken-like.
+;       FULL_FOCUS      - Record every single attempt made at decomposition during
+;                         iteration. Makes things a little slower, but plots nicer. 
+;
+; OUTPUTS:
+;       DECOMP     	- Decomposition structure containing the shapelet
+;                  	  coefficients with the optimal beta, n_max and centroid
+;                  	  parameters.
+;
+; OPTIONAL OUTPUTS:
+;       FOCUS      	- IDL structure tracing the search on the beta-n_max plane.
+;       RECOMP     	- Recomposed image using optimal shapelet parameters.
+;
+; CALLING SEQUENCE:
+;       decomp=shapelets_focus(pstamp,focus=focus)
+;
+; NOTES:
+;       MEANINGS OF FLAG: (out of date!)
+;       0: OK
+;       1: Iteration bounced into theta_min or max wall at some point
+;       2: n_max_max reached - shapelets incompletely represent object
+;       3: Converged (in n_max search) by flatness limit.
+;       4: Could not converge to target chi^2 (either not monotonic in n_max or dithering amoeba) 
+;       5: Centroid wandered, pushing the basis functions off the edge of the postage stamp
+;       6: Fatal error
+;       NB it can only be one of these. If duplicated, highest number takes
+;          priority.
+;
+; MODIFICATION HISTORY:
+;       Apr 06 - Possibility of a maximum allowed iteration time added by RM.
+;       Sep 05 - POLAR and DIAMOND options added by RM.
+;       Jul 05 - Significant load of bug fixes and clean up by RM.
+;       Apr 05 - NON1 keyword added by RM.
+;       Apr 05 - Guess used as starting n_max by Stephane Paulin-Henriksson.
+;       Nov 04 - PSF passed to guess_nmax_beta routine by RM.
+;       Aug 04 - Fixed_beta and max_loops keywords added by RM.
+;       Jul 04 - Header updated to reflect new additional options by RM.
+;       May 04 - Tidied up by RM.
+;       Apr 02 - PSF deconvolution implemented by Richard Massey.
+;       Apr 02 - Written by Richard Massey and Alexandre Refregier.
+;-
+
+function shapelets_focus, PSTAMP,                                  $
+                          FOCUS=focus,                             $
+                          RECOMP=recomp,                           $
+                          BETA_GUESS=beta_guess,	                 $
+                          BETA_TOLERANCE=beta_tolerance,           $
+                          FIXED_BETA=fixed_beta,	                 $
+                          N_MAX_GUESS=n_max_guess,	               $
+                          N_MAX_RANGE=n_max_range,	               $
+                          CENTRE_GUESS=centre_guess,	             $
+                          CHISQ_TARGET=chisq_target,	             $
+                          CHISQ_TOLERANCE=chisq_tolerance,         $
+                          CHISQ_FLATNESS=chisq_flatness,           $
+                          THETA_MIN_GEOM=theta_min_geom,           $
+                          GAUSSIAN_RECENTRING=gaussian_recentring, $
+                          MAX_LOOPS=max_loops,                     $
+                          MAX_TIME=max_time,                       $
+                          FULL_FOCUS=full_focus,                   $
+                          NAME=name,                               $
+                          PSF=psf,                                 $
+                          SKY=sky,			                           $
+                          NON1=non1,			                         $
+                          DIAMOND=diamond,                         $
+                          POLAR=polar,                             $
+                          VERBOSE=verbose,		                     $
+                          SILENT=silent
+
+COMPILE_OPT idl2
+
+; Initial declarations
+if not keyword_set(max_loops)   then max_loops=10          ; Number of iterations before we give up
+if not keyword_set(n_max_range) then n_max_range=[2,20]    ; Default hard boundaries for n_max
+if n_elements(n_max_guess) eq 0 then n_max_guess=2         ; Quick first iteration at low n_max
+n_max = n_max_range[0]>n_max_guess<n_max_range[1]          ; Keep n_max within the hard boundaries
+if keyword_set(fixed_beta)      then beta_guess=fixed_beta ; Force beta to a particular value
+if not keyword_set(name)        then begin                 ; Name object
+  name="" & if size(pstamp,/type) eq 8 then if tag_exist(pstamp,"name") then name=pstamp.name
+endif
+
+
+; Initialise focus structure to contain the history of this search
+focus=shapelets_create_focus(NAME=name,                       $
+                             CHISQ_TARGET=chisq_target,       $
+                             CHISQ_TOLERANCE=chisq_tolerance, $
+                             CHISQ_FLATNESS=chisq_flatness,   $
+                             BETA_TOLERANCE=beta_tolerance,   $
+                             THETA_MIN_GEOM=theta_min_geom)
+
+
+; Try to find a better beta and centroid
+decomp=shapelets_focus_beta(PSTAMP, N_MAX>1, FOCUS,                  $
+                            CENTRE_GUESS=centre_guess,               $
+                            BETA_GUESS=beta_guess,                   $
+                            FULL_FOCUS=full_focus,                   $
+                            GAUSSIAN_RECENTRING=gaussian_recentring, $
+                            PSF=psf,                                 $
+                            SKY=sky,                                 $
+                            POLAR=polar,                             $
+                            DIAMOND=diamond,                         $
+                            SILENT=1-keyword_set(verbose))
+
+
+; Ignore the new value for beta if we knew it a priori
+if keyword_set(fixed_beta) then focus.beta=fixed_beta
+
+
+; Initialise some flags to track the progress of our iteration
+iloop=0
+converged=0B
+failed=0B
+start_time=systime(0,/SECONDS)
+
+; Alternate n_max-finder and beta-finder until tolerance is reached
+while not converged and not failed do begin
+
+  ; Try to find a better n_max
+  n_max_old=focus.n_max  
+  decomp=shapelets_focus_nmax(PSTAMP, FOCUS.BETA, FOCUS,     $
+                              RECOMP=recomp,		             $
+                              N_MAX_RANGE=n_max_range,       $
+                              FULL_FOCUS=full_focus,	       $
+                              PSF=psf,  		                 $
+                              SKY=sky,  		                 $
+                              POLAR=polar,                   $
+                              DIAMOND=diamond,               $
+                              SILENT=1-keyword_set(verbose))
+
+  ; Catch errors before it crashes
+  if focus.flag eq 9 then break
+
+  ; Test for convergence
+  if focus.n_max eq n_max_old then begin           ; n_max has not changed  
+    converged=1B
+  endif else if keyword_set(fixed_beta) then begin ; don't want to adjust beta further
+    converged=1B
+;  endif else if focus.flag eq 4 then begin         ; we've found a plateau 
+;    failed=1B
+  endif else begin
+
+    ; Try to find a better beta
+    beta_old=focus.beta
+    decomp=shapelets_focus_beta(PSTAMP, FOCUS.N_MAX, FOCUS,              $
+                                RECOMP=recomp,		                       $
+                                FULL_FOCUS=full_focus,	                 $
+                                GAUSSIAN_RECENTRING=gaussian_recentring, $
+                                PSF=psf, 		                             $
+                                SKY=sky, 		                             $
+                                POLAR=polar,                             $
+                                DIAMOND=diamond,                         $
+                                SILENT=1-keyword_set(verbose))
+
+    ; Test for convergence
+    if abs(focus.beta-beta_old) le focus.beta_tolerance then begin
+      ; Beta has not changed significantly   
+      converged=1B 
+    endif else if focus.flag eq 8 then begin
+      ; Basis functions have fallen off the edge of the postage stamp
+      message,"Centroid wandered, pushing model off postage stamp",/info,noprint=1-keyword_set(verbose)
+      failed=1B
+    endif else begin
+
+      ; Increment loop counter
+      iloop+=1
+  
+      ; Limit the number of loops
+      if iloop gt max_loops then begin
+        focus.flag=(focus.flag>7)
+        failed=1B
+      endif
+
+    endelse
+
+  endelse
+
+  ; Check we don't spend forever decomposing just one or two objects
+  if not converged and keyword_set(max_time) then begin
+    elapsed_time=systime(0,/SECONDS)-start_time
+    message,"Taken "+strtrim(elapsed_time,2)+"s so far on this object",$
+      /INFO,NOPRINT=1-keyword_set(verbose)
+    if elapsed_time gt max_time then begin
+      focus.flag=(focus.flag>7)
+      failed=1B
+      message,"Skipping this object because it is taking too long",$
+        /INFO,NOPRINT=SILENT
+    endif
+  endif
+
+endwhile
+
+
+; Do one final decomposition if we require coeffs with n=1 to be zero
+if keyword_set(non1) then begin
+  decomp=shapelets_decomp(pstamp,$
+    focus.beta,focus.n_max,recomp=recomp,centre=focus.x,$
+    psf=psf,sky=sky,non1=non1,polar=polar,diamond=diamond)
+  shapelets_update_focus, focus, decomp
+endif
+
+
+; Print final step to screen, without repeating the decomposition
+if keyword_set(verbose) then message,"       n_max, beta, chi^2, x_c:"+$
+  string(fix(focus.n_max))+string(focus.beta)+string(focus.chisq)+$
+  string(focus.x[0])+string(focus.x[1]),/info
+
+
+; Display a summary of the results
+message,"Focus flag: "+strtrim(focus.flag,1)+$
+        ", n_max="+strtrim(focus.n_max,1)+$
+        ", chi^2="+strtrim(focus.chisq,1),/INFO,NOPRINT=SILENT
+return,decomp
+
+end
+
+
